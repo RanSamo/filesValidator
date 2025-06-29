@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Report Distribution Validator</title>
+    <!-- Allow iframe embedding -->
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors *;">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #fff;
+            color: #172b4d;
+            line-height: 1.5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #172b4d;
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .info {
+            color: #6b778c;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+        
+        /* Confluence-friendly styles */
+        .upload-section {
+            background: #f4f5f7;
+            border: 2px dashed #dfe1e6;
+            border-radius: 3px;
+            padding: 32px;
+            text-align: center;
+            margin-bottom: 24px;
+            transition: all 0.2s ease;
+        }
+        
+        .upload-section:hover {
+            border-color: #0052cc;
+            background: #f0f7ff;
+        }
+        
+        .upload-section.dragover {
+            border-color: #0052cc;
+            background: #deebff;
+        }
+        
+        .upload-button {
+            background: #0052cc;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease;
+            display: inline-block;
+        }
+        
+        .upload-button:hover {
+            background: #0747a6;
+        }
+        
+        .results-section {
+            display: none;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .summary-card {
+            background: #f4f5f7;
+            border-radius: 3px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid #dfe1e6;
+        }
+        
+        .summary-card h3 {
+            margin: 0 0 8px 0;
+            color: #6b778c;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .summary-card .number {
+            font-size: 32px;
+            font-weight: 500;
+            margin: 8px 0;
+        }
+        
+        .summary-card.success .number { color: #00875a; }
+        .summary-card.failed .number { color: #de350b; }
+        .summary-card.total .number { color: #0052cc; }
+        
+        .filter-section {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-button {
+            padding: 6px 12px;
+            border: 1px solid #dfe1e6;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-button:hover {
+            background: #f4f5f7;
+        }
+        
+        .filter-button.active {
+            background: #0052cc;
+            color: white;
+            border-color: #0052cc;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 6px 12px;
+            border: 1px solid #dfe1e6;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        
+        .export-button {
+            background: #6b778c;
+            color: white;
+            padding: 6px 16px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+        
+        .export-button:hover {
+            background: #5e6c84;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 14px;
+            background: white;
+            border: 1px solid #dfe1e6;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        th {
+            background: #f4f5f7;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #172b4d;
+            border-bottom: 1px solid #dfe1e6;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f4f5f7;
+        }
+        
+        tr:hover td {
+            background: #f4f5f7;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-success {
+            background: #e3fcef;
+            color: #00875a;
+        }
+        
+        .status-failed {
+            background: #ffebe6;
+            color: #de350b;
+        }
+        
+        .frequency-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .frequency-hourly { background: #fff0b3; color: #172b4d; }
+        .frequency-daily { background: #deebff; color: #0747a6; }
+        .frequency-weekly { background: #e3e5e8; color: #172b4d; }
+        .frequency-monthly { background: #e3fcef; color: #006644; }
+        
+        .details {
+            font-size: 12px;
+            color: #6b778c;
+            line-height: 1.4;
+            margin-top: 4px;
+        }
+        
+        .error-message {
+            color: #de350b;
+            font-weight: 500;
+        }
+        
+        /* Ensure it works in iframe */
+        html, body {
+            height: auto;
+            overflow: visible;
+        }
+        
+        /* Loading indicator */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b778c;
+        }
+        
+        @media (max-width: 768px) {
+            .filter-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Report Distribution Monitoring Validator</h1>
+        <p class="info">Upload your Excel file to validate report distribution status. The tool checks for failures and validates success counts based on frequency requirements.</p>
+        
+        <div class="upload-section" id="uploadSection">
+            <p style="margin-bottom: 16px; color: #172b4d;">
+                <strong>📁 Drag and drop your Excel file here</strong><br>
+                <span style="color: #6b778c; font-size: 14px;">or click to browse</span>
+            </p>
+            <label for="fileInput" class="upload-button">Choose File</label>
+            <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+        </div>
+        
+        <div class="results-section" id="resultsSection">
+            <div class="summary-cards">
+                <div class="summary-card total">
+                    <h3>Total Reports</h3>
+                    <div class="number" id="totalCount">0</div>
+                </div>
+                <div class="summary-card success">
+                    <h3>Successful</h3>
+                    <div class="number" id="successCount">0</div>
+                </div>
+                <div class="summary-card failed">
+                    <h3>Failed</h3>
+                    <div class="number" id="failedCount">0</div>
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <button class="filter-button active" data-filter="all">All Reports</button>
+                <button class="filter-button" data-filter="failed">Failed Only</button>
+                <button class="filter-button" data-filter="hourly">Hourly</button>
+                <button class="filter-button" data-filter="daily">Daily</button>
+                <button class="filter-button" data-filter="weekly">Weekly</button>
+                <button class="filter-button" data-filter="monthly">Monthly</button>
+                <input type="text" class="search-box" placeholder="Search by report name or instance...">
+                <button class="export-button" onclick="exportResults()">Export to Excel</button>
+            </div>
+            
+            <div id="tableContainer"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // Wrapped in IIFE to avoid global scope pollution
+        (function() {
+            let allResults = [];
+            let currentFilter = 'all';
+            
+            // File upload handling
+            const fileInput = document.getElementById('fileInput');
+            const uploadSection = document.getElementById('uploadSection');
+            
+            uploadSection.addEventListener('click', () => fileInput.click());
+            
+            uploadSection.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadSection.classList.add('dragover');
+            });
+            
+            uploadSection.addEventListener('dragleave', () => {
+                uploadSection.classList.remove('dragover');
+            });
+            
+            uploadSection.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadSection.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+            
+            // Filter buttons
+            document.querySelectorAll('.filter-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-button').forEach(b => b.classList.remove('active'));
+                    button.classList.add('active');
+                    currentFilter = button.getAttribute('data-filter');
+                    displayResults();
+                });
+            });
+            
+            // Search functionality
+            document.querySelector('.search-box').addEventListener('input', (e) => {
+                displayResults(e.target.value);
+            });
+            
+            function handleFile(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array', cellDates: true});
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                        
+                        validateReports(jsonData);
+                    } catch (error) {
+                        alert('Error reading file: ' + error.message);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+            
+            function validateReports(data) {
+                const currentDate = new Date();
+                allResults = data.map(row => {
+                    const validation = validateReport(row, currentDate);
+                    return {
+                        ...row,
+                        validation: validation
+                    };
+                });
+                
+                updateSummary();
+                displayResults();
+                document.getElementById('resultsSection').style.display = 'block';
+            }
+            
+            function validateReport(report, currentDate) {
+                const frequency = report.frequency;
+                const successCount = report.cnt_success_last_day || 0;
+                const failCount = report.cnt_fail_last_day || 0;
+                const lastReportDate = new Date(report.max_report_dt);
+                
+                let expectedCount;
+                let isValid = false;
+                let message = '';
+                let details = '';
+                
+                // First check if there are any failures
+                if (failCount > 0) {
+                    isValid = false;
+                    message = `✗ ${failCount} failed report(s) detected`;
+                    details = `Success: ${successCount}, Failed: ${failCount}`;
+                    return {
+                        isValid,
+                        message,
+                        details,
+                        expectedCount: 'N/A',
+                        actualCount: successCount,
+                        failCount: failCount
+                    };
+                }
+                
+                switch(frequency) {
+                    case 'Hourly':
+                        expectedCount = 24;
+                        // For hourly, we still expect 24 reports
+                        isValid = successCount === expectedCount;
+                        message = isValid ? 
+                            `✓ All ${expectedCount} hourly reports received` : 
+                            `✗ Missing hourly reports - only ${successCount}/${expectedCount} received`;
+                        details = `Received: ${successCount}/${expectedCount} reports, No failures`;
+                        break;
+                        
+                    case 'Daily':
+                        // For daily, any count >= 1 is success (as long as no failures)
+                        isValid = successCount >= 1;
+                        message = isValid ? 
+                            `✓ Daily report(s) received (${successCount} successful)` : 
+                            '✗ No daily reports received';
+                        details = `Last report: ${formatDate(lastReportDate)}, Success count: ${successCount}`;
+                        break;
+                        
+                    case 'Weekly':
+                        const daysSinceLastReport = Math.floor((currentDate - lastReportDate) / (1000 * 60 * 60 * 24));
+                        const shouldHaveNewReport = daysSinceLastReport >= 7;
+                        
+                        if (shouldHaveNewReport) {
+                            // Need at least 1 report if 7+ days have passed
+                            isValid = successCount >= 1;
+                            message = isValid ? 
+                                `✓ Weekly report received on schedule (${successCount} successful)` : 
+                                `✗ Weekly report overdue by ${daysSinceLastReport - 7} days`;
+                        } else {
+                            // Not time for new report yet
+                            isValid = true;
+                            message = `✓ Next report due in ${7 - daysSinceLastReport} days`;
+                        }
+                        details = `Last report: ${formatDate(lastReportDate)} (${daysSinceLastReport} days ago), Success count: ${successCount}`;
+                        break;
+                        
+                    case 'Monthly':
+                        const lastReportMonth = lastReportDate.getMonth();
+                        const lastReportYear = lastReportDate.getFullYear();
+                        const currentMonth = currentDate.getMonth();
+                        const currentYear = currentDate.getFullYear();
+                        
+                        const monthsDiff = (currentYear - lastReportYear) * 12 + (currentMonth - lastReportMonth);
+                        const shouldHaveMonthlyReport = monthsDiff >= 1;
+                        
+                        if (shouldHaveMonthlyReport) {
+                            // Need at least 1 report if a calendar month has passed
+                            isValid = successCount >= 1;
+                            message = isValid ? 
+                                `✓ Monthly report received on schedule (${successCount} successful)` : 
+                                `✗ Monthly report overdue by ${monthsDiff} month(s)`;
+                        } else {
+                            // Not time for new report yet
+                            isValid = true;
+                            message = '✓ Monthly report up to date';
+                        }
+                        details = `Last report: ${formatDate(lastReportDate)} (${getMonthName(lastReportDate.getMonth())} ${lastReportYear}), Success count: ${successCount}`;
+                        break;
+                        
+                    default:
+                        message = '✗ Unknown frequency type';
+                        details = 'Unable to validate';
+                }
+                
+                return {
+                    isValid,
+                    message,
+                    details,
+                    expectedCount,
+                    actualCount: successCount,
+                    failCount: failCount
+                };
+            }
+            
+            function formatDate(date) {
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            
+            function getMonthName(monthIndex) {
+                const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                              'July', 'August', 'September', 'October', 'November', 'December'];
+                return months[monthIndex];
+            }
+            
+            function updateSummary() {
+                const totalCount = allResults.length;
+                const successCount = allResults.filter(r => r.validation.isValid).length;
+                const failedCount = totalCount - successCount;
+                
+                document.getElementById('totalCount').textContent = totalCount;
+                document.getElementById('successCount').textContent = successCount;
+                document.getElementById('failedCount').textContent = failedCount;
+            }
+            
+            function displayResults(searchTerm = '') {
+                let filteredResults = allResults;
+                
+                // Apply status filter
+                if (currentFilter === 'failed') {
+                    filteredResults = filteredResults.filter(r => !r.validation.isValid);
+                } else if (currentFilter !== 'all') {
+                    filteredResults = filteredResults.filter(r => 
+                        r.frequency.toLowerCase() === currentFilter
+                    );
+                }
+                
+                // Apply search filter
+                if (searchTerm) {
+                    const search = searchTerm.toLowerCase();
+                    filteredResults = filteredResults.filter(r => 
+                        r.report_distribution_name.toLowerCase().includes(search) ||
+                        r.Instance.toLowerCase().includes(search)
+                    );
+                }
+                
+                // Build table
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Instance</th>
+                                <th>Report Name</th>
+                                <th>Frequency</th>
+                                <th>Success Count</th>
+                                <th>Fail Count</th>
+                                <th>Validation Details</th>
+                                <th>Last Report Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                filteredResults.forEach(result => {
+                    const statusClass = result.validation.isValid ? 'status-success' : 'status-failed';
+                    const statusText = result.validation.isValid ? 'Pass' : 'Fail';
+                    const frequencyClass = `frequency-${result.frequency.toLowerCase()}`;
+                    
+                    html += `
+                        <tr>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td>${result.Instance}</td>
+                            <td>${result.report_distribution_name}</td>
+                            <td><span class="frequency-badge ${frequencyClass}">${result.frequency}</span></td>
+                            <td>${result.cnt_success_last_day}</td>
+                            <td>${result.cnt_fail_last_day || 0}</td>
+                            <td>
+                                <div class="${result.validation.isValid ? '' : 'error-message'}">
+                                    ${result.validation.message}
+                                </div>
+                                <div class="details">${result.validation.details}</div>
+                            </td>
+                            <td>${formatDate(new Date(result.max_report_dt))}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                document.getElementById('tableContainer').innerHTML = html;
+            }
+            
+            window.exportResults = function() {
+                const exportData = allResults.map(r => ({
+                    Status: r.validation.isValid ? 'Pass' : 'Fail',
+                    Instance: r.Instance,
+                    'Report Name': r.report_distribution_name,
+                    Frequency: r.frequency,
+                    'Success Count': r.cnt_success_last_day,
+                    'Fail Count': r.cnt_fail_last_day || 0,
+                    'Expected Count': r.validation.expectedCount || 'N/A',
+                    'Validation Message': r.validation.message,
+                    'Validation Details': r.validation.details,
+                    'Last Report Date': r.max_report_dt
+                }));
+                
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Validation Results');
+                
+                // Generate filename with timestamp
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                XLSX.writeFile(wb, `report_validation_${timestamp}.xlsx`);
+            }
+        })();
+    </script>
+</body>
+</html>
