@@ -304,7 +304,7 @@
                 <button class="filter-button" data-filter="weekly">Weekly</button>
                 <button class="filter-button" data-filter="monthly">Monthly</button>
                 <input type="text" class="search-box" placeholder="Search by report name or instance...">
-                <button class="export-button" onclick="exportResults()">Export to Excel</button>
+                <!-- <button class="export-button" onclick="exportResults()">Export to Excel</button> -->
             </div>
             
             <div id="tableContainer"></div>
@@ -424,8 +424,8 @@
                 
                 switch(frequency) {
                     case 'Hourly':
-                        expectedCount = 24;
-                        // For hourly, we still expect 24 reports
+                        expectedCount = 23;
+                        // For hourly, after checking with team 23 report for hourly files.
                         isValid = successCount === expectedCount;
                         message = isValid ? 
                             `✓ All ${expectedCount} hourly reports received` : 
@@ -590,7 +590,7 @@
                 html += '</tbody></table>';
                 document.getElementById('tableContainer').innerHTML = html;
             }
-            
+            /* for now no export functionality.
             window.exportResults = function() {
                 const exportData = allResults.map(r => ({
                     Status: r.validation.isValid ? 'Pass' : 'Fail',
@@ -612,7 +612,8 @@
                 // Generate filename with timestamp
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
                 XLSX.writeFile(wb, `report_validation_${timestamp}.xlsx`);
-            }
+            }*/
+
         })();
     </script>
 </body>
